@@ -1,0 +1,113 @@
+/*
+ * ag-grid cell decoration. Class names carry the `wp-` prefix so they cannot collide
+ * with anything in the host, and every selector is anchored inside `.wp-root`.
+ *
+ * These cannot live in a `<style scoped>` block: ag-grid creates the cell elements
+ * itself, so Vue's scope attribute is never applied to them.
+ */
+
+/* Publish validation — `plan.md` §5.4, "해당 셀 빨간 테두리". */
+.wp-root .wp-cell-error {
+  box-shadow: inset 0 0 0 2px #ff4d4f;
+  background-color: rgba(255, 77, 79, 0.07) !important;
+}
+
+/* First row of a phase block gets a hairline so blocks read as blocks. */
+.wp-root .wp-row-phase-start .ag-cell {
+  border-top: 1px solid #d9d9d9;
+}
+
+/*
+ * 미배정(회색) 행 — `plan.md` §0.2.
+ *
+ * Both add paths now produce a row with no phase and no milestone, and the user is meant
+ * to read "아직 분류 전" without stopping to look. Muted text plus a dashed outline says
+ * *unfinished* rather than *broken*: these rows are perfectly legal, they persist through
+ * every save, and on the project tier they may stay this way forever. Only a template
+ * publish objects to them, and that path has its own red `wp-cell-error` decoration —
+ * which is why this one deliberately does not use red.
+ *
+ * The dashes are drawn with an inset shadow rather than a border so the row keeps its
+ * height; a 1px border here shifts every cell in the row by a pixel.
+ */
+.wp-root .wp-row-unassigned .ag-cell {
+  color: #8c8c8c;
+  font-style: italic;
+}
+
+.wp-root .wp-row-unassigned .ag-cell:first-child {
+  box-shadow: inset 2px 0 0 0 #bfbfbf;
+}
+
+.wp-root .wp-row-unassigned::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-top: 1px dashed #d9d9d9;
+  border-bottom: 1px dashed #d9d9d9;
+}
+
+/*
+ * 배정된 소속 셀 — `plan.md` §0.3.
+ *
+ * Locked, but not dead: a click offers 미배정으로 전환, so the cursor stays a pointer rather
+ * than becoming `not-allowed`. The only visual cue is a faint left tick, because these are
+ * the *normal* state of a finished board — shouting about them would invert the emphasis.
+ */
+.wp-root .wp-cell-locked {
+  cursor: pointer;
+}
+
+.wp-root .wp-cell-locked:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Long 서술형 columns: two lines, then ellipsis. */
+.wp-root .wp-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+/*
+ * Vertically centred cell content (`plan.md` §0.5.9).
+ *
+ * The clamp above is `-webkit-box`, and one element cannot be both that and a flex box — so
+ * the **cell** carries this and the clamped span sits inside it as the centred child. The
+ * clamp used to fake alignment with `padding-top: 5px`; that is gone, because a fixed nudge
+ * is right for exactly one text length.
+ */
+.wp-root .wp-cell-mid {
+  display: flex;
+  align-items: center;
+}
+
+/* Momentary highlight when jumping to the first publish error. */
+.wp-root .wp-row-flash {
+  animation: wp-row-flash 0.9s ease-out 2;
+}
+
+@keyframes wp-row-flash {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  40% {
+    background-color: rgba(255, 77, 79, 0.22);
+  }
+}
+
+/* The board fills its container; the host decides how tall that container is. */
+.wp-root .wp-grid-host {
+  width: 100%;
+  min-height: 320px;
+}
+
+/* Read-only versions should look inert, not merely behave that way. */
+.wp-root .wp-grid-readonly .ag-cell {
+  cursor: default;
+}

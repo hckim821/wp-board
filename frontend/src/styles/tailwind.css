@@ -1,0 +1,42 @@
+/*
+ * NOTE: `@tailwind base` is deliberately omitted.
+ *
+ * Even with `corePlugins.preflight: false`, Tailwind's base layer emits a global
+ * `*, ::before, ::after { --tw-*: … }` rule. A federated remote must not add rules
+ * that match every element in the host document, so we emit the same variable
+ * defaults ourselves, scoped to our own subtree (`.wp-root`), together with the one
+ * piece of preflight our layout utilities genuinely need: `box-sizing: border-box`.
+ *
+ * ⚠️ Preflight is also what normally sets `border-style: solid` on every element, so
+ * without it `wp-border`/`wp-border-b`/`wp-border-t` alone draw NOTHING (width 1px,
+ * style `none`). Every solid border must therefore carry an explicit `wp-border-solid`.
+ * We do not fix this with a scoped `.wp-root *` rule on purpose: it would tie with
+ * antd's own selectors on specificity and win or lose by stylesheet order — 2026-08-08,
+ * the invisible 진행전 dashboard cells were exactly this bug.
+ */
+@tailwind components;
+@tailwind utilities;
+
+.wp-root,
+.wp-root *,
+.wp-root *::before,
+.wp-root *::after {
+  box-sizing: border-box;
+
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+}

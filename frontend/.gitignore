@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-remote/
+dist-check/
+.mf/
+
+# Written by `npm run verify` / `npm run check:dom`.
+verify-report.txt
+dom-check-report.txt
+live-check-report.txt

@@ -1,0 +1,41 @@
+{
+  "name": "@dsep/wp-board-remote",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Work Package board — Module Federation remote (Vue 3 + ag-grid Community)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit -p tsconfig.app.json && vite build",
+    "build:remote": "vue-tsc --noEmit -p tsconfig.app.json && vite build --mode remote",
+    "type-check": "vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.check.json",
+    "verify": "esbuild src/dev/verify.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/verify.mjs --log-level=warning && node node_modules/.cache/verify.mjs",
+    "check:dom": "vite build --mode check && node dist-check/domCheck.mjs",
+    "check": "npm run type-check && npm run verify && npm run check:dom",
+    "preview": "vite preview",
+    "check:live": "esbuild src/dev/liveCheck.ts --bundle --platform=node --format=esm --external:axios --outfile=node_modules/.cache/liveCheck.mjs --log-level=warning && node node_modules/.cache/liveCheck.mjs"
+  },
+  "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
+    "ag-grid-community": "33.3.2",
+    "ag-grid-vue3": "33.3.2",
+    "ant-design-vue": "^4.2.6",
+    "axios": "^1.7.9",
+    "dayjs": "^1.11.13",
+    "vue": "^3.5.41"
+  },
+  "devDependencies": {
+    "@module-federation/vite": "^1.20.4",
+    "@types/jsdom": "^28.0.3",
+    "@types/node": "^26.1.2",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/test-utils": "^2.4.11",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.2",
+    "vite": "^7.3.6",
+    "vue-tsc": "^3.3.9"
+  }
+}

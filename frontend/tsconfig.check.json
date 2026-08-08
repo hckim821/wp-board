@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src/dev/verify.ts", "src/dev/domCheck.ts", "src/dev/liveCheck.ts", "src/**/*.ts", "src/**/*.vue"],
+  "exclude": []
+}

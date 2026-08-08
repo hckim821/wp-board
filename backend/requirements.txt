@@ -1,0 +1,31 @@
+# 런타임 의존성.
+#
+# 이 모듈은 호스트 FastAPI 프로젝트에 이식되므로, 여기 목록은 "설치 목록" 이
+# 아니라 **호환 범위 선언**에 가깝다. 호스트가 이미 갖고 있는 버전과 겹치는지
+# 확인하는 용도로 읽을 것 (backend/INTEGRATION.md 의 버전 표 참고).
+#
+# 검증 환경: Python 3.11.14 / MariaDB 11.2.2
+
+fastapi>=0.115,<1.0
+SQLAlchemy>=2.0.30,<2.1
+pydantic>=2.7,<3.0
+pydantic-settings>=2.3,<3.0
+PyMySQL>=1.1.1,<2.0
+
+# 대시보드 PPTX 내보내기 (plan.md §0.5.6). 내보내기는 백엔드가 만든다.
+#
+# **라이브러리 경로의 import 를 막지 않는다** — `dashboard_pptx_service` 가 함수
+# 안에서 늦게 import 하므로, 이 패키지가 없어도 `create_wp_router()` 는 뜨고
+# 나머지 API 는 전부 동작한다. 내보내기 엔드포인트만 501 을 낸다. 호스트가 PPT
+# 기능을 쓰지 않는다면 설치하지 않아도 되도록 한 것이다.
+python-pptx>=1.0,<2.0
+
+# 보드 XLSX 내보내기 (plan.md §0.5.7) — CSV 를 대체한다.
+#
+# `db/migrate.py`(엑셀 임포터)도 쓰지만 그건 개발 도구이고, 이제 **런타임 경로**
+# 에서도 쓰므로 여기 선언한다. python-pptx 와 같은 규율로 늦게 import 하므로,
+# 없으면 내보내기 엔드포인트만 501 이고 나머지 API 는 정상이다.
+openpyxl>=3.1,<4.0
+
+# standalone.py (개발 전용) 에서만 필요하다. 이식 시 제외 가능.
+uvicorn[standard]>=0.30
