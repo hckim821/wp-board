@@ -11,10 +11,11 @@
 아래 §1 의 목록을 손으로 옮기는 대신 한 번에 만든다.
 
 ```bash
-python tools/export_transplant.py                 # _transplant/ 에 생성
-python tools/export_transplant.py --out ../host    # 다른 위치에
-python tools/export_transplant.py --frontend       # dist-remote/ 도 (먼저 npm run build:remote)
-python tools/export_transplant.py --check-only     # 이미 만든 번들만 다시 감사
+python tools/export_transplant.py                    # _transplant/ 에 생성 (프론트=소스 복사)
+python tools/export_transplant.py --out ../host       # 다른 위치에
+python tools/export_transplant.py --frontend remote   # 프론트를 federation remote 로
+python tools/export_transplant.py --frontend none     # 백엔드·DB 만
+python tools/export_transplant.py --check-only        # 이미 만든 번들만 다시 감사
 ```
 
 ```
@@ -23,8 +24,17 @@ _transplant/
   db/transplant.sql     신규 설치용 DDL
   db/migrations/        기존 설치 업그레이드용
   docs/                 INTEGRATION.md · TRANSPLANT.md · backend-requirements.txt
-  frontend/dist-remote/ (--frontend)
+  frontend/src/         (--frontend src, 기본) dev/ · mock/ 을 뺀 소스
+  frontend/wp-board.css (--frontend src) 빌드된 스타일시트
+  frontend/MERGE.md     (--frontend src) 편입 절차 — Tailwind 함정 포함
+  frontend/dist-remote/ (--frontend remote)
 ```
+
+> **프론트 소스 복사 시 유일한 함정: Tailwind 설정을 병합하지 말 것.** `prefix` 와
+> `corePlugins.preflight` 는 **빌드 단위** 설정이라 한 빌드에 두 벌을 둘 수 없다. 호스트가
+> Tailwind 를 기본 설정으로 쓰는데 `prefix: 'wp-'` 를 넣으면 호스트 자신의 유틸리티가 전부
+> 무효가 된다. 대신 **빌드된 `wp-board.css` 한 장을 import** 하고, 호스트 Tailwind 의
+> `content` 에서 우리 폴더를 **제외**한다. 자세한 것은 생성된 `frontend/MERGE.md`.
 
 **요점은 복사가 아니라 복사 후 감사다.** 수동 이관의 실제 사고는 파일을 빠뜨리는 것이 아니라
 **지워야 할 것을 남기는 것**이다 — `standalone.py` 하나가 따라가면 호스트 앱과 `FastAPI()` 가
@@ -39,6 +49,13 @@ _transplant/
 | `wp_dev_makers` 참조 · 설비사 JOIN 부재 | 호스트에 없는 테이블 (§2.1 위반) |
 | `.env` 류 부재 | 개발 접속 정보 유출 |
 | `transplant.sql` 에 `CREATE DATABASE`/`USE`·개발 스텁 부재 | 호스트 DB 를 갈아탄다 |
+| (소스 복사) `dev/`·`mock/` 부재 | 하니스·목이 호스트 번들에 들어간다 |
+| (소스 복사) **상대 import 자기완결성** | 호스트 빌드가 깨진다 |
+| (소스 복사) `import.meta.env`·`vue-router`·antd 리셋 부재 | 개발값 고정 · 라우터 충돌 · 호스트 스타일 파괴 |
+| (소스 복사) CSS 선택자가 전부 `wp-` 네임스페이스 | 호스트 스타일로 샌다 |
+
+자기완결성 검사가 이 중 가장 강하다: `dev/`·`mock/` 을 뺀 뒤 남은 참조를 **실제로 풀어 본다.**
+문자열 패턴은 참조가 어떤 모양일지 미리 알아야 하지만, 이쪽은 모양과 무관하게 잡는다.
 
 > 문자열이 아니라 **AST** 로 보고, SQL 은 **주석을 걷어낸 뒤** 본다. 이 저장소의 주석은 금지
 > 대상을 *설명하느라* 그 문자열을 그대로 담고 있어서, 순진하게 검색하면 자기 자신을 위반으로
