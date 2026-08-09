@@ -29,7 +29,18 @@ from app.models.base import VersionStatus
 from app.router import create_wp_router
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "db" / "schema.sql"
+
+# `backend/.env` (`backend/.env.example` 참고). 없거나 python-dotenv 가 없으면
+# 건너뛰고 셸 환경변수만 쓴다. 기존 환경변수를 덮어쓰지 않으므로, 셸에서 다른 DB 를
+# 겨눠도 `.env` 가 그것을 되돌리지 않는다.
+try:  # pragma: no cover - 설치 여부에 따른 분기
+    from dotenv import load_dotenv
+
+    load_dotenv(BACKEND_ROOT / ".env")
+except ImportError:  # pragma: no cover
+    pass
 
 #: 접속 정보는 **환경변수**로 받는다 — 저장소에 비밀번호를 두지 않는다.
 #:

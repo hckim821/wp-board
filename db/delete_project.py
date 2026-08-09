@@ -24,9 +24,10 @@ UI 에는 이 동작이 없다. 설비사 관리 화면의 프로젝트 스위�
     WP_DB_PASSWORD  **필수** — 없으면 실행을 거부한다
     WP_DB_NAME      기본 iai-test   (하이픈 때문에 raw SQL 에서는 항상 백틱)
 
-PowerShell 예::
+값은 `backend/.env` 에서 읽는다 (`backend/.env.example` 참고). 셸에 이미 설정된
+환경변수가 항상 우선하므로, 한 번만 다른 DB 를 겨누고 싶으면 이렇게 덮어쓴다::
 
-    $env:WP_DB_PASSWORD = 'xxxx'; python db/delete_project.py 12
+    $env:WP_DB_NAME = 'iai-staging'; python db/delete_project.py 12
 
 ## 왜 CASCADE 에 맡기지 않는가
 
@@ -51,8 +52,19 @@ import io
 import json
 import os
 import sys
+from pathlib import Path
 
 import pymysql
+
+# `backend/.env` (`backend/.env.example` 참고) — 접속 정보 파일은 저장소에 하나다.
+# 아래 상수를 읽기 **전에** 올려야 한다. python-dotenv 가 없으면 건너뛰고 셸
+# 환경변수만 쓴다. 기존 환경변수는 덮어쓰지 않는다.
+try:  # pragma: no cover - 설치 여부에 따른 분기
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parent.parent / "backend" / ".env")
+except ImportError:  # pragma: no cover
+    pass
 
 # --- 접속 정보 (환경변수) -------------------------------------------------------
 DB_HOST = os.environ.get("WP_DB_HOST", "localhost")

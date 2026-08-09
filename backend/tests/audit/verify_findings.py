@@ -44,6 +44,15 @@ BACKEND = Path(__file__).resolve().parents[2]
 REPO = BACKEND.parent
 sys.path.insert(0, str(BACKEND))
 
+# `backend/.env` (`backend/.env.example` 참고). 아래 접속 상수를 읽기 전에 올린다.
+# 없거나 python-dotenv 가 없으면 셸 환경변수만 쓴다.
+try:  # pragma: no cover - 설치 여부에 따른 분기
+    from dotenv import load_dotenv
+
+    load_dotenv(BACKEND / ".env")
+except ImportError:  # pragma: no cover
+    pass
+
 from sqlalchemy import select, text                                     # noqa: E402
 from fastapi import FastAPI                                             # noqa: E402
 from fastapi.testclient import TestClient                               # noqa: E402

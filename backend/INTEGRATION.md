@@ -244,6 +244,14 @@ mysql+pymysql://user01:<WP_DB_PASSWORD>@localhost:3306/iai-test?charset=utf8mb4
 개발용 스크립트(`db/migrate.py`·`db/verify.py`·`db/delete_project.py`)와 테스트는
 `WP_DB_PASSWORD`(+선택적 `WP_DB_HOST`/`PORT`/`USER`/`NAME`)를 읽는다.
 
+값은 gitignore 된 **`backend/.env`** 에 둔다 (키만 든 `backend/.env.example` 이 커밋본).
+
+> ⚠️ **이식 시 `.env` 는 따라가지 않는다.** `core/config.py` 에는 `env_file` 이 **없고**,
+> 라이브러리 코드는 파일에서 설정을 읽지 않는다. `.env` 를 읽는 곳은 개발 전용 진입점뿐이다
+> — `app/standalone.py`(삭제 대상) · `tests/` · `db/*.py`(둘 다 이식 대상 아님). `python-dotenv`
+> 도 같은 이유로 `requirements-dev.txt` 에만 있다. 호스트는 종전대로 세션 팩토리를 직접
+> 주입하며, 환경변수도 `.env` 도 필요 없다.
+
 ---
 
 ## 6. 의존성 버전

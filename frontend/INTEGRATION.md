@@ -146,18 +146,22 @@ Work Package 탭 헤더에는 원본 **포맷 이름과 발행 버전**(`v2`)이
 
 ### Props — `./MakerSettings` 전용
 
-`makerId` 도 `onOpenProject` 도 없다. 공통 props 중 `readOnly` 만 의미가 있으며, 켜면 표는
-그대로 보이되 체크박스와 **프로젝트 스위치**가 비활성화되고 `저장` 이 사라진다.
+`makerId` 도 `onOpenProject` 도 없다. 공통 props 중 `readOnly` 만 의미가 있으며, 켜면 목록은
+그대로 보이되 **모든 스위치**가 비활성화되고 `저장` 이 사라진다.
 
 인스턴스 메서드는 `reload()` 와 `hasUnsavedChanges()` 다. **후자는 진짜로 변할 수 있다** —
-체크만 하고 저장하지 않은 상태가 존재하므로, 호스트 라우터 가드에 연결할 것.
+스위치만 만지고 저장하지 않은 상태가 존재하므로, 호스트 라우터 가드에 연결할 것.
+
+화면 형태는 **전체 현황과 같은 카드**다 (`plan.md` §0.6.1): 옅은 배경 위 흰 카드, 설비사마다
+접기/펼치기(기본 펼침), 하위 프로젝트는 들여쓰기. 표 한 장이던 이전 판은 설비사 밑에
+프로젝트가 딸리면서 무너졌다. 호스트가 붙일 것은 없다 — 높이만 `height` 로 준다.
 
 #### 프로젝트 사용 여부 스위치
 
-설비사마다 그 설비사의 프로젝트를 나열하고 각 프로젝트에 on/off 스위치를 둔다
+설비사 카드 안에 그 설비사의 프로젝트를 나열하고 각 프로젝트에 on/off 스위치를 둔다
 (`wp_projects.is_active`). **off 는 전체 현황에서 감추기이지 삭제가 아니다** — 항목·상태·
-완료일은 남고 다시 켜면 그대로 돌아온다. 설비사 체크와 **같은 저장 버튼**을 쓰며,
-`PUT /makers/settings` 한 번에 `settings` 와 `projects` 두 배열로 실려 **한 트랜잭션**으로
+완료일은 남고 다시 켜면 그대로 돌아온다. 설비사의 전체현황 표시 스위치와 **같은 저장 버튼**을
+쓰며, `PUT /makers/settings` 한 번에 `settings` 와 `projects` 두 배열로 실려 **한 트랜잭션**으로
 반영된다. 두 배열이 나뉘어 있는 이유는 규칙이 달라서다: 모르는 `maker_id` 는 허용(설비사는
 호스트 것이고 resolver 미주입이 정상 상태), 모르는 프로젝트 id 는 **422**.
 
@@ -823,7 +827,7 @@ npm install
 npm run dev          # http://localhost:5180 — 목 데이터로 즉시 동작
 npm run type-check   # vue-tsc (앱 + 체크 스크립트 두 벌)
 npm run verify       # 재계산·경계·apply·버전·검증·대시보드/전체현황·문서 계약·순서 (558 checks, 목)
-npm run check:dom    # jsdom 마운트·그리드·팝업·탭·문서/Owner 셀 팝업·허브·XLSX/PPT (418 checks, 목)
+npm run check:dom    # jsdom 마운트·그리드·팝업·탭·문서/Owner 셀 팝업·허브·XLSX/PPT (426 checks, 목)
 npm run check        # 위 세 개
 npm run build:remote # dist-remote/
 ```

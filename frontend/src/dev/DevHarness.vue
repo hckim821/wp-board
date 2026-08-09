@@ -10,12 +10,24 @@ import MakerSettings from '../remote/MakerSettingsRemote.vue'
  * excluded from the federation entries and from `dist-remote`.
  *
  * It exists to prove what INTEGRATION.md §5/§6 actually care about:
- *   1. the **menu** is here, outside the modules — two separate exposes, two host screens
- *      (`plan.md` §0.1). 기준 데이터 관리 takes no maker at all; 프로젝트 requires one.
- *   2. the maker is chosen *here* and passed in as `makerId`
+ *   1. the **menu** is here, outside the modules (`plan.md` §0.1). 기준 데이터 관리 and
+ *      설비사 관리 take no maker at all.
+ *   2. the maker is resolved *here* and passed in as `makerId` / `makerName`
  *   3. mount → unmount → remount leaves nothing behind
  *   4. two instances can be mounted at once without sharing state
  *   5. the host's own global CSS (`host.css`) survives the remote being on screen
+ *
+ * **프로젝트는 메뉴 항목이 아니다** (2026-08-09 사용자 결정). 진입 경로가 전체 현황의
+ * [이동] 하나뿐이므로 (`plan.md` §0.6-4) 메뉴에 두면 "고른 프로젝트가 없는 프로젝트
+ * 화면" 이라는, 아무도 원하지 않는 상태로 가는 버튼이 된다. 그래서 `openProject` 가
+ * 채워져 있을 때만 존재하는 화면이고, 그 값은 [이동] 콜백이나 딥링크로만 들어온다.
+ *
+ * **가짜 설비사 표도 없다** (같은 결정). 예전에는 `A설비 주식회사` / `B테크놀로지` 를
+ * 여기 박아 두고 버튼으로 골랐는데, 설비사를 고르는 것은 호스트의 일이지 *이 목록이
+ * 정답이라는 뜻은 아니었다* — 실제 DB 의 설비사 id 와 무관한 숫자였고, 그 상태로
+ * 프로젝트 화면에 들어가면 남의 설비사를 보고 있게 된다. 지금은 열린 프로젝트에서
+ * 거꾸로 해석한다: `GET /projects/{id}` 가 주는 `maker_id` · `maker_name` 을 호스트가
+ * 읽어서 prop 으로 내린다. 이름 해석이 호스트 책임이라는 계약이 그대로 드러난다.
  *
  * 목 모드는 **없다** (2026-08-08 사용자 결정). 하니스는 항상 실서버(8010)와
  * 통신한다 — 목으로 시작하면 발행·저장이 인메모리에만 남고 새로고침에 증발하는
@@ -24,13 +36,11 @@ import MakerSettings from '../remote/MakerSettingsRemote.vue'
  * 클라이언트를 만든다.
  */
 
-/** Pretend host maker table. The modules have no idea this exists. */
-const HOST_MAKERS = [
-  { id: 1, name: 'A설비 주식회사' },
-  { id: 2, name: 'B테크놀로지' },
-]
-
-/** The host's own menu. Each item mounts a different federated module. */
+/**
+ * The host's own menu. Each item mounts a different federated module.
+ *
+ * `'projects'` is **not** a menu item — it is the screen `openProject` puts us on.
+ */
 type Screen = 'overview' | 'projects' | 'master' | 'makers'
 
 /**
@@ -38,13 +48,19 @@ type Screen = 'overview' | 'projects' | 'master' | 'makers'
  * renamed and entered from there, and 프로젝트 is where its [이동] button lands.
  */
 const screen = ref<Screen>('overview')
-const makerId = ref(HOST_MAKERS[0]!.id)
+
 /**
- * The project the host picked. Null until 전체 현황's [이동] hands one over — clicking the
- * 프로젝트 menu directly therefore lands on the module's empty state, which is exactly what a
- * host with no selection should see (`plan.md` §0.6-4).
+ * 열린 프로젝트, 그리고 그것을 여느라 호스트가 해석한 설비사.
+ *
+ * 셋을 한 객체로 묶은 것은 **함께 정해지고 함께 사라지기** 때문이다. 예전처럼 따로 두면
+ * "설비사는 1번인데 프로젝트는 7번 설비사 것" 같은 조합이 타입상 가능해지고, 실제로 가짜
+ * 설비사 버튼이 그 상태를 만들 수 있었다. `null` 이면 프로젝트 화면 자체가 없다.
  */
-const selectedProjectId = ref<number | null>(null)
+const openProject = ref<{
+  projectId: number
+  makerId: number
+  makerName: string | null
+} | null>(null)
 const mounted = ref(true)
 const split = ref(false)
 const backend = ref<'probing' | 'live' | 'down'>('probing')
@@ -96,27 +112,20 @@ function remount() {
   requestAnimationFrame(() => (mounted.value = true))
 }
 
-function switchMaker(id: number) {
-  makerId.value = id
-  // 다른 설비사의 프로젝트를 계속 열어 둘 수는 없다.
-  selectedProjectId.value = null
-  remount()
-}
-
-function switchScreen(next: Screen) {
+/**
+ * 메뉴 클릭. **프로젝트는 여기로 오지 않는다** — 메뉴에 없기 때문이다.
+ *
+ * 어느 메뉴를 누르든 열린 프로젝트는 닫는다. 메뉴는 전부 설비사 무관 화면이라, 프로젝트를
+ * 열어 둔 채 두면 URL 만 `/` 로 돌아가고 상태는 남는 어긋남이 생긴다.
+ */
+function switchScreen(next: Exclude<Screen, 'projects'>) {
   screen.value = next
-  // 프로젝트 경로만 라우팅 대상이다 — 나머지 화면은 URL 을 `/` 로 되돌린다.
-  if (next !== 'projects') {
-    selectedProjectId.value = null
-    setUrl('/', true)
-  } else if (selectedProjectId.value != null) {
-    setUrl(`/${selectedProjectId.value}`, true)
-  }
+  openProject.value = null
+  setUrl('/', true)
   remount()
 }
 
-const makerName = computed(() => HOST_MAKERS.find((m) => m.id === makerId.value)?.name ?? null)
-const isProjects = computed(() => screen.value === 'projects')
+const isProjects = computed(() => screen.value === 'projects' && openProject.value != null)
 const isOverview = computed(() => screen.value === 'overview')
 const isMakers = computed(() => screen.value === 'makers')
 
@@ -150,18 +159,28 @@ function setUrl(path: string, push: boolean) {
 }
 
 /**
- * Resolves which maker a project belongs to.
+ * Resolves which maker a project belongs to, **and what it is called**.
  *
- * A deep link carries only the project id, and `ProjectWorkspace` needs both — so the host
- * looks the maker up, exactly as INTEGRATION.md §5 tells a real one to. The module is never
- * asked to derive it.
+ * A deep link carries only the project id, and `ProjectWorkspace` needs the maker too — so the
+ * host looks it up, exactly as INTEGRATION.md §5 tells a real one to. The module is never asked
+ * to derive it.
+ *
+ * 이름까지 여기서 읽는 이유: 설비사 이름은 호스트 소유다. 서버는 `MakerResolver` 를 거쳐
+ * `maker_name` 을 실어 주고(미주입이면 `null`), 그 `null` 을 그대로 넘기는 것도 계약의
+ * 일부다 — 모듈은 `설비사 #{id}` 로 대신 표시한다.
  */
-async function resolveMaker(projectId: number): Promise<number | null> {
+async function resolveProject(
+  projectId: number,
+): Promise<{ makerId: number; makerName: string | null } | null> {
   try {
     const response = await fetch(`${liveApiBase.replace(/\/+$/, '')}/api/v1/projects/${projectId}`)
     if (!response.ok) return null
-    const body = (await response.json()) as { project?: { maker_id?: number } }
-    return body?.project?.maker_id ?? null
+    const body = (await response.json()) as {
+      project?: { maker_id?: number; maker_name?: string | null }
+    }
+    const makerId = body?.project?.maker_id
+    if (makerId == null) return null
+    return { makerId, makerName: body?.project?.maker_name ?? null }
   } catch {
     return null
   }
@@ -169,18 +188,17 @@ async function resolveMaker(projectId: number): Promise<number | null> {
 
 /** Opens a project from a URL. Falls back to 전체 현황 when it does not exist (404). */
 async function openFromUrl(projectId: number) {
-  const maker = await resolveMaker(projectId)
-  if (maker == null) {
+  const resolved = await resolveProject(projectId)
+  if (resolved == null) {
     // eslint-disable-next-line no-console
     console.warn('[host] no such project, returning to 전체 현황', projectId)
-    selectedProjectId.value = null
+    openProject.value = null
     screen.value = 'overview'
     setUrl('/', false)
     remount()
     return
   }
-  makerId.value = maker
-  selectedProjectId.value = projectId
+  openProject.value = { projectId, ...resolved }
   screen.value = 'projects'
   remount()
 }
@@ -188,18 +206,24 @@ async function openFromUrl(projectId: number) {
 function openProjectFromOverview(projectId: number, makerIdFromOverview: number) {
   // eslint-disable-next-line no-console
   console.log('[host] onOpenProject', { projectId, makerId: makerIdFromOverview })
-  makerId.value = makerIdFromOverview
-  selectedProjectId.value = projectId
+  // 콜백은 id 둘만 준다 (그게 계약이다). 이름은 호스트가 따로 해석하므로, 먼저 띄우고
+  // 이름이 도착하면 채운다 — 이름 하나 때문에 화면 전환을 기다릴 이유가 없다.
+  openProject.value = { projectId, makerId: makerIdFromOverview, makerName: null }
   screen.value = 'projects'
   setUrl(`/${projectId}`, true)
   remount()
+  void resolveProject(projectId).then((resolved) => {
+    if (resolved && openProject.value?.projectId === projectId) {
+      openProject.value = { projectId, ...resolved }
+    }
+  })
 }
 
 /** 뒤로 가기 — URL 이 정본이므로 거기서 다시 읽는다. */
 function onPopState() {
   const projectId = projectIdFromUrl()
   if (projectId == null) {
-    selectedProjectId.value = null
+    openProject.value = null
     screen.value = 'overview'
     remount()
     return
@@ -226,13 +250,11 @@ if (bootProjectId != null) void openFromUrl(bootProjectId)
       >
         전체 현황
       </button>
-      <button
-        class="host-btn"
-        :data-active="screen === 'projects'"
-        @click="switchScreen('projects')"
-      >
-        프로젝트
-      </button>
+      <!--
+        프로젝트 메뉴 항목은 **없다** (2026-08-09). 진입은 전체 현황의 [이동] 하나뿐이라
+        (`plan.md` §0.6-4) 메뉴에 두면 "고른 프로젝트가 없는 프로젝트 화면" 으로 가는
+        버튼이 된다.
+      -->
 
       <!--
         관리 그룹 — 일상 화면(전체 현황·프로젝트)과 시각적으로 구분한다 (`plan.md` §0.6-4).
@@ -257,18 +279,15 @@ if (bootProjectId != null) void openFromUrl(bootProjectId)
         Integrated AI 참여 설비사 관리
       </button>
 
-      <template v-if="isProjects">
-        <span class="host-note">설비사 선택은 호스트의 책임:</span>
-        <button
-          v-for="maker in HOST_MAKERS"
-          :key="maker.id"
-          class="host-btn"
-          :data-active="maker.id === makerId"
-          @click="switchMaker(maker.id)"
-        >
-          {{ maker.name }}
-        </button>
-      </template>
+      <!--
+        설비사 고정 목록은 **없다**. 열린 프로젝트에서 거꾸로 해석한 값을 보여 준다 —
+        고르는 화면이 아니라 해석 결과라는 점이 그대로 드러나야 한다.
+      -->
+      <span v-if="isProjects && openProject" class="host-note">
+        [이동] 으로 진입 — 호스트가 해석한 설비사:
+        {{ openProject.makerName ?? `#${openProject.makerId} (이름 미해석)` }} ·
+        projectId {{ openProject.projectId }}
+      </span>
       <span v-else-if="isOverview" class="host-note">
         전체 현황은 전 설비사 관망 — makerId prop 이 없고, [이동] 은 onOpenProject 콜백으로 돌아온다
       </span>
@@ -308,11 +327,11 @@ if (bootProjectId != null) void openFromUrl(bootProjectId)
       <div class="host-panel">
         <template v-if="mounted">
           <ProjectWorkspace
-            v-if="isProjects"
+            v-if="openProject"
             :key="`a-${mountKey}`"
-            :maker-id="makerId"
-            :project-id="selectedProjectId"
-            :maker-name="makerName"
+            :maker-id="openProject.makerId"
+            :project-id="openProject.projectId"
+            :maker-name="openProject.makerName"
             :read-only="readOnly"
             :api-base-url="liveApiBase"
             :warn-on-unload="false"
@@ -347,11 +366,11 @@ if (bootProjectId != null) void openFromUrl(bootProjectId)
         <!-- Second instance, its own client: proves there is no shared module state. -->
         <template v-if="mounted">
           <ProjectWorkspace
-            v-if="isProjects"
+            v-if="openProject"
             :key="`b-${mountKey}`"
-            :maker-id="makerId"
-            :project-id="selectedProjectId"
-            :maker-name="`${makerName} (2번째 인스턴스)`"
+            :maker-id="openProject.makerId"
+            :project-id="openProject.projectId"
+            :maker-name="`${openProject.makerName ?? `설비사 #${openProject.makerId}`} (2번째 인스턴스)`"
             :api-base-url="liveApiBase"
             :warn-on-unload="false"
           />

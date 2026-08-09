@@ -2496,21 +2496,57 @@ async function main() {
     check('nothing is dirty on arrival', (settings.vm as unknown as { hasUnsavedChanges(): boolean }).hasUnsavedChanges() === false)
 
     /*
-     * Ticking a box makes it dirty, which is what a host route guard reads.
-     *
-     * antd spreads fall-through attrs onto the **inner `<input>`**, so `[data-wp-maker-show]`
-     * may already be the input rather than the wrapper. Both shapes are handled — assuming
-     * one of them is how this crashed the first time.
+     * 카드 형태 (2026-08-09 개편) — 전체 현황과 같은 언어다 (`plan.md` §0.6-4).
+     * 표 한 장이던 시절로 되돌아가면 여기서 깨진다.
      */
-    const boxHook = checkboxes()[0] as HTMLElement
-    const box = (boxHook.tagName === 'INPUT' ? boxHook : boxHook.querySelector('input')) as HTMLInputElement
-    check('setup: reached the checkbox input', !!box)
-    box.click()
+    const makerCards = () => settingsEl.querySelectorAll('[data-wp-maker-card]')
+    check('each maker is a card, not a table row', makerCards().length >= 4, makerCards().length)
+    check('…and every card can collapse', settingsEl.querySelectorAll('[data-wp-maker-toggle]').length === makerCards().length)
+
+    /*
+     * 접기 판정은 **그 카드 안에서** 센다. 픽스처의 설비사 넷 중 프로젝트를 가진 것은
+     * 하나뿐이고 카드 순서는 이름순이라, 전체 행 수로 재면 프로젝트 0개짜리 카드를
+     * 접고는 "아무 일도 안 일어났다" 며 실패한다 — 실제로 그렇게 한 번 틀렸다.
+     */
+    const populatedCard = [...makerCards()].find(
+      (card) => card.querySelectorAll('[data-wp-project-row]').length > 0,
+    ) as HTMLElement | undefined
+    check('setup: some maker card has projects under it', !!populatedCard)
+    const cardToggle = populatedCard!.querySelector('[data-wp-maker-toggle]') as HTMLElement
+    const cardRows = () => populatedCard!.querySelectorAll('[data-wp-project-row]').length
+
+    const expandedRows = cardRows()
+    check('cards start expanded, so project rows are on screen', expandedRows >= 1, expandedRows)
+    check('setup: the toggle says so', cardToggle?.getAttribute('aria-expanded') === 'true')
+    cardToggle.click()
     for (let i = 0; i < 20; i++) {
       await nextTick()
       await sleep(10)
     }
-    check('ticking a box reports unsaved changes', (settings.vm as unknown as { hasUnsavedChanges(): boolean }).hasUnsavedChanges() === true)
+    check('collapsing hides that card’s projects', cardRows() === 0, cardRows())
+    check('…and the toggle reports it', cardToggle.getAttribute('aria-expanded') === 'false')
+    cardToggle.click()
+    for (let i = 0; i < 20; i++) {
+      await nextTick()
+      await sleep(10)
+    }
+    check('expanding brings them back', cardRows() === expandedRows, cardRows())
+
+    /*
+     * Flipping the maker switch makes it dirty, which is what a host route guard reads.
+     *
+     * It is an antd `Switch` now, not a `Checkbox` — fall-through attrs land on the outer
+     * `<button role="switch">`, so the hook *is* the click target. (The old code reached for
+     * an inner `<input>`, which a Switch does not have.)
+     */
+    const makerSwitch = checkboxes()[0] as HTMLElement
+    check('setup: the maker control is a switch', makerSwitch?.getAttribute('role') === 'switch', makerSwitch?.tagName)
+    makerSwitch.click()
+    for (let i = 0; i < 20; i++) {
+      await nextTick()
+      await sleep(10)
+    }
+    check('flipping a maker switch reports unsaved changes', (settings.vm as unknown as { hasUnsavedChanges(): boolean }).hasUnsavedChanges() === true)
     const saveBtn = [...settingsEl.querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === '저장') as HTMLButtonElement
     check('and enables 저장', !!saveBtn && !saveBtn.disabled)
     saveBtn.click()
@@ -2592,13 +2628,11 @@ async function main() {
     }
     const roSettingsEl = roSettings.element as HTMLElement
     check('readOnly still lists the makers', roSettingsEl.querySelectorAll('[data-wp-maker-show]').length >= 4)
-    const roBoxes = [...roSettingsEl.querySelectorAll('[data-wp-maker-show]')].map((el) =>
-      el.tagName === 'INPUT' ? el : el.querySelector('input'),
-    ) as HTMLInputElement[]
+    const roBoxes = [...roSettingsEl.querySelectorAll('[data-wp-maker-show]')] as HTMLElement[]
     check(
-      'but every checkbox is disabled',
-      roBoxes.length >= 4 && roBoxes.every((i) => i?.disabled === true),
-      roBoxes.map((i) => i?.disabled),
+      'but every maker switch is disabled',
+      roBoxes.length >= 4 && roBoxes.every((s) => s.hasAttribute('disabled')),
+      roBoxes.map((s) => s.hasAttribute('disabled')),
     )
     const roSwitches = [...roSettingsEl.querySelectorAll('[data-wp-project-active]')] as HTMLElement[]
     check(
@@ -2623,9 +2657,9 @@ async function main() {
       await nextTick()
       await sleep(10)
     }
+    // Switch 이므로 훅이 곧 클릭 대상이다 (안쪽 `<input>` 을 찾던 옛 코드는 null 을 집었다).
     const aHook = (a.element as HTMLElement).querySelectorAll('[data-wp-maker-show]')[0] as HTMLElement
-    const aBox = (aHook.tagName === 'INPUT' ? aHook : aHook.querySelector('input')) as HTMLInputElement
-    aBox.click()
+    aHook.click()
     for (let i = 0; i < 20; i++) {
       await nextTick()
       await sleep(10)

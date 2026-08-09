@@ -18,6 +18,29 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# `backend/.env` 를 프로세스 환경으로 올린다 (`backend/.env.example` 참고).
+#
+# **여기서만 한다.** 파일에서 설정을 읽는 것은 프로세스를 소유하는 쪽의 일이고,
+# 이 파일이 이 저장소에서 앱을 만드는 유일한 지점이자 이식 시 삭제 대상이다.
+# `core/config.py` 에 `env_file` 을 걸면 호스트에 이식된 라이브러리가 호스트
+# 디렉터리에서 제멋대로 `.env` 를 찾게 된다 (INTEGRATION.md §4 위반).
+#
+# 경로를 **명시**한다. 인자 없는 `load_dotenv()` 는 호출자 위치에서 위로 훑기
+# 때문에, 호스트 트리에 놓였을 때 남의 `.env` 를 집어들 수 있다. 여기서는 언제나
+# `backend/.env` 하나다 — 어느 디렉터리에서 uvicorn 을 띄우든 같은 파일이다.
+#
+# python-dotenv 는 requirements-dev.txt 에만 있다. 없으면 그냥 건너뛰고 셸
+# 환경변수만 쓴다 — 개발 편의 기능이 없다고 앱이 뜨지 못하면 안 된다.
+# `load_dotenv` 는 기본적으로 기존 환경변수를 **덮어쓰지 않는다.**
+try:  # pragma: no cover - 설치 여부에 따른 분기
+    from pathlib import Path
+
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+except ImportError:  # pragma: no cover
+    pass
+
 from .core.config import get_settings
 from .core.database import create_session_factory
 from .ports.stub_maker_resolver import StubMakerResolver

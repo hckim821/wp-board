@@ -43,6 +43,22 @@ from pathlib import Path
 import pymysql
 from openpyxl import load_workbook
 
+# `backend/.env` (`backend/.env.example` 참고). 아래 상수를 읽기 **전에** 올려야 한다.
+#
+# 이 스크립트는 `db/` 에 있지만 `.env` 는 `backend/` 에 둔다 — 접속 정보 파일이
+# 저장소에 하나뿐이어야 두 벌이 갈릴 일이 없고, 사용자가 서버를 띄우는 자리가
+# 거기이기 때문이다.
+#
+# python-dotenv 는 requirements-dev.txt 에만 있으므로, 없으면 건너뛰고 셸
+# 환경변수만 쓴다 — requirements.txt 만 설치한 사람도 이 스크립트는 돌아야 한다.
+# 기존 환경변수는 덮어쓰지 않는다.
+try:  # pragma: no cover - 설치 여부에 따른 분기
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parent.parent / "backend" / ".env")
+except ImportError:  # pragma: no cover
+    pass
+
 # --- 접속 정보 -----------------------------------------------------------------
 # **환경변수로 받는다** — 저장소에 비밀번호를 두지 않는다. 비밀번호만 기본값이
 # 없고, 없으면 `connect()` 가 무엇을 설정해야 하는지 말하며 멈춘다.

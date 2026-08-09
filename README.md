@@ -23,34 +23,43 @@ Phase/Milestone 자동 재계산, 버전 관리(draft 발행 → 임시저장 �
 | Node.js | 20+ | 검증 환경 v24.12.0 |
 | MariaDB / MySQL | 실행 중 | `localhost:3306` |
 
-### 1.1 DB 접속 정보 — 환경변수
+### 1.1 DB 접속 정보 — `backend/.env`
 
-**저장소에 비밀번호를 두지 않는다.** 스크립트와 테스트는 환경변수로 받는다.
+**저장소에 비밀번호를 두지 않는다.** 커밋되는 것은 키만 든 `backend/.env.example` 이고,
+실제 값은 각자 `backend/.env` 를 만들어 채운다 (gitignore 됨).
+
+```bash
+cd backend
+cp .env.example .env          # PowerShell: Copy-Item .env.example .env
+# 편집기로 열어 WP_DB_DSN 과 WP_DB_PASSWORD 를 채운다
+```
+
+**접속 정보 파일은 저장소에 이 하나뿐이다.** `db/*.py` 스크립트도 `db/` 가 아니라
+`backend/.env` 를 읽는다 — 두 벌이 생기면 갈리기 때문이다.
 
 | 변수 | 기본값 | 쓰는 곳 |
 |---|---|---|
-| `WP_DB_HOST` | `localhost` | `db/*.py`, `backend/tests` |
+| `WP_DB_DSN` | **없음 — 필수** | 백엔드 앱 (`app/standalone.py`, pydantic-settings) |
+| `WP_DB_PASSWORD` | **없음 — 필수** | `db/*.py`, `backend/tests` |
+| `WP_DB_HOST` | `localhost` | 〃 |
 | `WP_DB_PORT` | `3306` | 〃 |
 | `WP_DB_USER` | `user01` | 〃 |
-| `WP_DB_PASSWORD` | **없음 — 필수** | 〃 |
 | `WP_DB_NAME` | `iai-test` | 〃 |
-| `WP_DB_DSN` | **없음 — 필수** | 백엔드 앱 (`app/standalone.py`, pydantic-settings) |
 
-```bash
-# bash
-export WP_DB_PASSWORD='...'
-export WP_DB_DSN='mysql+pymysql://user01:...%23@localhost:3306/iai-test?charset=utf8mb4'
-```
+`.env` 로딩에는 `python-dotenv` 가 필요하며 **`requirements-dev.txt` 에만** 있다 —
+이식되는 라이브러리 코드는 파일에서 설정을 읽지 않기 때문이다 (`INTEGRATION.md` §4).
+설치돼 있지 않으면 `.env` 는 조용히 무시되고 셸 환경변수만 쓰인다.
 
-```powershell
-# PowerShell
-$env:WP_DB_PASSWORD = '...'
-$env:WP_DB_DSN = 'mysql+pymysql://user01:...%23@localhost:3306/iai-test?charset=utf8mb4'
-```
+> **셸 환경변수가 항상 우선한다.** `.env` 는 이미 설정된 값을 덮어쓰지 않으므로,
+> 한 번만 다른 DB 를 겨누려면 그때만 셸에서 지정하면 된다:
+>
+> ```powershell
+> $env:WP_DB_NAME = 'iai-staging'; python db/verify.py
+> ```
 
 > ⚠️ DB 명 `` `iai-test` `` 의 하이픈 때문에 raw SQL 에서는 **항상 백틱**이 필요하다.
 > DSN 에서는 비밀번호의 `#` 를 `%23` 으로 인코딩해야 한다 — 안 하면 DSN 이 **조용히 잘려**
-> 인증 실패처럼 보인다.
+> 인증 실패처럼 보인다. `WP_DB_PASSWORD` 는 반대로 **raw 값**이다(인코딩하지 않는다).
 >
 > `WP_DB_DSN` 미설정은 백엔드 기동 **오류**다. 하드코딩 폴백을 두지 않았다 — 조용히
 > 엉뚱한 DB 에 붙는 것보다 뜨지 않는 편이 낫다.
@@ -127,9 +136,11 @@ npm install
 
 ```bash
 cd backend
-export WP_DB_DSN='mysql+pymysql://user01:...%23@localhost:3306/iai-test?charset=utf8mb4'
 python -m uvicorn app.standalone:app --host 127.0.0.1 --port 8010 --reload
 ```
+
+접속 정보는 `backend/.env` 에서 읽는다 (§1.1). `WP_DB_DSN` 이 없으면 **기동하지 않고**
+무엇을 설정해야 하는지 알려준다.
 
 - 헬스체크: <http://127.0.0.1:8010/health>
 - API 문서: <http://127.0.0.1:8010/docs>
@@ -180,11 +191,11 @@ python backend/tests/audit/verify_findings.py
 
 # 프론트: 타입체크 + 로직 검증 + DOM/CSS 격리 검사
 cd frontend && npm run check
-# → npm run verify 558 passed, 0 failed / npm run check:dom 418 passed, 0 failed
+# → npm run verify 558 passed, 0 failed / npm run check:dom 426 passed, 0 failed
 ```
 
-> **DB 를 쓰는 검증은 `WP_DB_PASSWORD` 를 요구한다** (저장소에 비밀번호를 두지 않는다).
-> 미설정이면 pytest 의 DB 테스트는 그 이유를 밝히며 skip 되고, `db/*.py` 는 멈춘다.
+> **DB 를 쓰는 검증은 `WP_DB_PASSWORD` 를 요구한다** — `backend/.env` 를 만들어 두면 된다 (§1.1).
+> 없으면 pytest 의 DB 테스트는 그 이유를 밝히며 skip 되고, `db/*.py` 는 멈춘다.
 >
 > `db/verify.py` 가 **DRIFT 를 보고하는 것은 현재 정상이다** — 사용자가 실사용을
 > 시작해 v2 발행·항목 편집이 쌓였고, 이 스크립트는 "단일 버전 · 엑셀 원본 일치" 라는
@@ -239,8 +250,7 @@ SQL 로 지운 뒤 `db/verify.py` 로 확인한다. 시드 보드(WP #1)는 건�
 직접 실행한다.
 
 ```bash
-# 접속 비밀번호는 환경변수로만 받는다 (저장소에 두지 않는다)
-export WP_DB_PASSWORD=xxxx          # PowerShell: $env:WP_DB_PASSWORD = 'xxxx'
+# 접속 정보는 backend/.env 에서 읽는다 (§1.1). 그때만 다른 DB 를 겨누려면 셸에서 덮어쓴다.
 
 python db/delete_project.py 12                 # 12번 프로젝트 삭제
 python db/delete_project.py 12 13 14           # 여러 개를 한 트랜잭션으로

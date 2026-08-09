@@ -88,9 +88,15 @@
   - ⚠️ **되돌리지 말 것**: `GET /makers` 의 `projects` 와 `known_makers` 는 **활성으로 거르지 않는다**. 거르면 끈 프로젝트를 다시 켤 화면이 사라져 off 가 편도 조작이 된다. 전체 현황의 표시 판단은 그대로 활성 기준(`has_projects`)이라 영향 없다.
   - 검증 규칙이 두 배열에서 반대인 것도 의도다: 모르는 `maker_id` 허용(호스트 소유·resolver 미주입이 정상), 모르는 프로젝트 id 는 422.
 - **`db/delete_project.py` (신규)** — DB 에서 프로젝트를 지우는 **유일한 경로**. UI·API 에 없다. FK **역순 직접 삭제**(캐스케이드에 맡기면 `wp_project_items` → phases/milestones 의 `ON DELETE RESTRICT` 때문에 전파 순서에 따라 실패). 확인 프롬프트는 y/N 이 아니라 **삭제할 id 재입력**. `--dry-run`/`--yes`/`--report`. 사용법은 README §5.2.
-- **자격증명 환경변수화.** 저장소에서 DB 비밀번호를 전부 제거했다. `WP_DB_PASSWORD`(+`WP_DB_HOST`/`PORT`/`USER`/`NAME`)를 `db/*.py` 와 `backend/tests` 가, `WP_DB_DSN` 을 백엔드 앱이 읽는다. **`standalone.py` 의 하드코딩 폴백은 삭제** — 미설정은 기동 오류다(조용히 엉뚱한 DB 에 붙는 것보다 낫다). pytest 는 미설정 시 이유를 밝히며 DB 테스트를 skip 한다.
+- **자격증명 `backend/.env` 분리.** 저장소에서 DB 비밀번호를 전부 제거했다. 커밋본은 키만 든 **`backend/.env.example`**, 실제 값은 gitignore 된 **`backend/.env`**. **접속 정보 파일은 저장소에 이 하나뿐이며 `db/*.py` 도 이것을 읽는다**(`backend/.env` 를 명시적으로 가리킨다 — 두 벌이 생기면 갈린다). `WP_DB_DSN` 은 백엔드 앱이, `WP_DB_PASSWORD`(+`WP_DB_HOST`/`PORT`/`USER`/`NAME`)는 `db/*.py` 와 `backend/tests` 가 읽는다. **`standalone.py` 의 하드코딩 폴백은 삭제** — 미설정은 기동 오류다(조용히 엉뚱한 DB 에 붙는 것보다 낫다). pytest 는 미설정 시 이유를 밝히며 DB 테스트를 skip 한다.
+  - ⚠️ **`.env` 로딩은 개발 전용 진입점에만 둔다** — `app/standalone.py`(삭제 대상) · `tests/` · `db/*.py`. `core/config.py` 에 `env_file` 을 걸면 이식된 라이브러리가 호스트 디렉터리에서 `.env` 를 찾는다 (INTEGRATION.md §4 위반). `python-dotenv` 는 같은 이유로 `requirements-dev.txt` 에만 있고, 없으면 조용히 건너뛴다. 계약 테스트가 `app/` 전체의 `os.environ` 직접 조회를 금지하므로 그쪽으로 우회하지도 말 것.
+  - 셸 환경변수가 **항상 우선**한다 (`load_dotenv` 는 덮어쓰지 않는다).
   - `verify_findings.py` 의 `WP_AUDIT_DB_PASSWORD` 는 이제 **raw 값**이다(예전엔 퍼센트 인코딩된 값). `%23` 을 넣으면 이중 인코딩된다.
-- 오케스트레이터 직접 검증 (2026-08-09): 백엔드 **561 passed** · `npm run verify` **558 passed** · `npm run check:dom` **418 passed** · type-check clean. `db/verify.py` DRIFT 와 `verify_findings.py` N-A 5건은 **기존 드리프트**(§0.5, §0.12 문서 모델 개편 잔재)이며 이번 변경과 무관 — OPEN 은 0.
+- **설비사 관리 화면 카드 개편** (§0.6.1-4, 사용자 피드백 "너무 투박"). antd `Table` → **전체 현황과 같은 카드 언어**: 옅은 배경 위 흰 카드 · 접기/펼치기(기본 펼침) · 하위 프로젝트 들여쓰기 · 설명은 하단 한 줄. 설비사의 전체현황 표시도 체크박스 → **스위치**(아래 프로젝트 스위치와 같은 조작이므로 한 화면에 두 종류의 on/off 를 두지 않는다).
+  - ⚠️ domCheck 훅이 바뀌었다: `[data-wp-maker-show]` 는 이제 `<button role="switch">` 라 **훅이 곧 클릭 대상**이다. 안쪽 `<input>` 을 찾던 옛 코드는 null 을 집는다. 새 훅: `[data-wp-maker-card]` · `[data-wp-maker-toggle]` · `[data-wp-project-row]` · `[data-wp-project-active]`.
+  - 접기 판정은 **카드 안에서** 세야 한다 — 픽스처의 설비사 넷 중 프로젝트를 가진 것은 하나뿐이고 카드 순서는 이름순이라, 전체 행 수로 재면 빈 카드를 접고 오탐한다(실제로 한 번 틀렸다).
+- **개발 하니스에서 프로젝트 메뉴·가짜 설비사 표 제거** (사용자 결정). 진입은 전체 현황 [이동] 뿐이라 메뉴 항목은 "고른 프로젝트가 없는 프로젝트 화면" 으로 가는 버튼이었다. `A설비 주식회사`/`B테크놀로지` 하드코딩도 삭제 — 실제 DB 설비사 id 와 무관한 숫자여서 그 상태로 진입하면 남의 설비사를 보게 됐다. 지금은 `openProject` 객체 하나(projectId·makerId·makerName)를 `GET /projects/{id}` 로 **거꾸로 해석**한다. 이름 해석이 호스트 책임이라는 계약이 하니스에 그대로 드러난다.
+- 오케스트레이터 직접 검증 (2026-08-09): 백엔드 **561 passed** · `npm run verify` **558 passed** · `npm run check:dom` **426 passed** · type-check clean. ⚠️ **UI 개편의 실제 렌더링은 눈으로 확인하지 못했다** — jsdom 은 레이아웃을 계산하지 않으므로 구조·동작만 검증됐다. `npm run dev` (5180) 로 확인할 것. `db/verify.py` DRIFT 와 `verify_findings.py` N-A 5건은 **기존 드리프트**(§0.5, §0.12 문서 모델 개편 잔재)이며 이번 변경과 무관 — OPEN 은 0.
 
 ## 1. 한 줄 요약
 

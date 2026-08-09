@@ -112,11 +112,15 @@ EOF
 backend/app/standalone.py            # 유일한 FastAPI() 생성 지점 — 호스트 앱과 충돌 방지
 backend/app/ports/stub_maker_resolver.py
 backend/tests/
+backend/.env  backend/.env.example   # 개발 접속 정보 — 애초에 복사해 오지 말 것
 db/migrate.py  db/verify.py         # 함께 삭제 (verify 가 migrate 를 import 한다)
+db/delete_project.py                # 관리자용 삭제 스크립트 (개발 DB 기준)
 db/dev_seed.sql
 ```
 
-환경변수는 필요 없다 — 세션 팩토리를 주입받으므로 라이브러리 경로는 `WP_*` 없이 동작한다.
+환경변수도 `.env` 도 필요 없다 — 세션 팩토리를 주입받으므로 라이브러리 경로는 `WP_*` 없이
+동작한다. `.env` 를 읽는 코드는 위 삭제 목록 안에만 있고, `core/config.py` 에는 `env_file` 이
+없다. `python-dotenv` 도 `requirements-dev.txt` 에만 있으므로 호스트 의존성에 추가되지 않는다.
 
 ### 3.3 MakerResolver 구현 (호스트 `makers` 테이블)
 
