@@ -75,9 +75,15 @@ export interface BoardContext {
    * **Null on the template tier**, where there is no maker at all (`plan.md` §0.1). Not a
    * placeholder id: a template belongs to nobody, and inventing a `0` here would be the
    * kind of fake value that later reads as real.
+   *
+   * **Getters, not values** (2026-08-09). These used to be plain snapshots taken when the
+   * shell called `provide()`, which silently froze them at their mount-time value: a host
+   * that resolved the maker name asynchronously — or changed it on a mounted board, which
+   * `BoardShell` explicitly supports for the store — kept showing the old one forever. The
+   * symptom was a title reading `설비사 #1` next to a perfectly well-named maker.
    */
-  makerId: number | string | null
-  makerName: string | null
+  makerId: () => number | string | null
+  makerName: () => string | null
   /** Host-owned navigation. There is no `vue-router` dependency anywhere in this package. */
   navigate: ((target: string, params?: Record<string, unknown>) => void) | null
   /** The element antd popups are portalled into, so they stay inside our styled subtree. */

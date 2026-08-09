@@ -1423,6 +1423,12 @@ async function main() {
       tabLabels(dashEl).join('|') === '대시보드|Work Package|문서 등록',
       tabLabels(dashEl),
     )
+    /*
+     * 설비사 이름 (2026-08-09). 이 마운트는 `makerName` prop 을 **준다** — 그래서 prop 이
+     * 이기는지 본다. prop 없이 서버 값으로 떨어지는 경로는 아래 별도 마운트에서 확인한다.
+     */
+    check('the maker name prop wins in the dashboard title', dashText().includes('A설비 주식회사'))
+    check('…and no raw id fallback leaked in', !dashText().includes('설비사 #'), dashText().slice(0, 0))
     // Owner 탭은 제거됐다 (`plan.md` §0.5.9) — 선택·관리는 보드 Owner 셀 팝업이 한다.
     check('no Owner tab any more', !tabLabels(dashEl).includes('Owner'), tabLabels(dashEl))
     check('대시보드 is the landing tab', !!dashEl.querySelector('[data-wp-dash-phase]'))
@@ -2072,6 +2078,56 @@ async function main() {
     dashWrapper.unmount()
     check('unmount leaves no dashboard DOM behind', dashHost.querySelectorAll('[data-wp-dash-card]').length === 0)
     dashHost.remove()
+
+    /*
+     * 설비사 이름, **prop 없이** (2026-08-09 사용자 보고: 제목이 `설비사 #1` 로 나온다).
+     *
+     * 호스트가 `makerName` 을 주지 않거나 늦게 주면 예전에는 곧장 원시 id 폴백으로 떨어졌다.
+     * 이름은 서버가 **호스트의 `MakerResolver`** 를 거쳐 `project.maker_name` 으로 이미
+     * 실어 보내고 있으므로(개발에서는 `wp_dev_makers.name`), 거기까지 내려가 본 뒤에야
+     * id 를 쓴다. 목도 이제 모든 프로젝트 응답에 그 필드를 채운다 — 실서버와 같은 형태다.
+     */
+    const noNameHost = dom.window.document.createElement('div')
+    dom.window.document.body.appendChild(noNameHost)
+    const noNameClient = createMockApiClient({ makerId: 7, latencyMs: 0 })
+    const noName = mount(ProjectWorkspace, {
+      attachTo: noNameHost,
+      props: {
+        makerId: 7,
+        projectId: seedProjectId(noNameClient),
+        // makerName 을 **일부러 주지 않는다**.
+        dataSource: noNameClient,
+        warnOnUnload: false,
+        height: '800px',
+      },
+    })
+    for (let i = 0; i < 50; i++) {
+      await nextTick()
+      await sleep(10)
+    }
+    const noNameText = () => (noName.element as HTMLElement).textContent ?? ''
+    /*
+     * 기대값이 **`G정밀`** 인 것이 요점이다. 위 마운트가 prop 으로 넘긴 `A설비 주식회사` 가
+     * 아니라 `SEED_MAKERS` 의 maker 7 이름이므로, 이 이름이 화면에 있다는 것은 값이
+     * resolver → `project.maker_name` 경로로 왔다는 뜻이다. prop 이름을 기대했다면 어느
+     * 경로로 왔는지 구분하지 못했을 것이다.
+     */
+    check(
+      'with no makerName prop the title still names the maker (server-resolved)',
+      noNameText().includes('G정밀'),
+      noNameText().slice(0, 120),
+    )
+    check(
+      '…so it does NOT fall back to the raw id',
+      !noNameText().includes('설비사 #'),
+    )
+    await clickTab(noName.element as HTMLElement, 'Work Package')
+    check(
+      'the Work Package toolbar names it too — the two titles must not disagree',
+      noNameText().includes('G정밀') && !noNameText().includes('설비사 #'),
+    )
+    noName.unmount()
+    noNameHost.remove()
   }
 
   section('L. ProjectsOverview — 설비사 구획 + 미니 대시보드 (plan.md 0.5-3 개정)')

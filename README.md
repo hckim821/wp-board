@@ -191,7 +191,7 @@ python backend/tests/audit/verify_findings.py
 
 # 프론트: 타입체크 + 로직 검증 + DOM/CSS 격리 검사
 cd frontend && npm run check
-# → npm run verify 558 passed, 0 failed / npm run check:dom 434 passed, 0 failed
+# → npm run verify 558 passed, 0 failed / npm run check:dom 439 passed, 0 failed
 ```
 
 > **DB 를 쓰는 검증은 `WP_DB_PASSWORD` 를 요구한다** — `backend/.env` 를 만들어 두면 된다 (§1.1).

@@ -125,8 +125,10 @@ provide(BOARD_CONTEXT, {
   structure,
   ownerPicker,
   documentPicker,
-  makerId: props.makerId,
-  makerName: props.makerName,
+  // Getters, for the same reason the store takes getters above: the host may change either
+  // on a mounted board, and a snapshot taken here would never see it (`runtime/context.ts`).
+  makerId: () => props.makerId,
+  makerName: () => props.makerName,
   navigate: props.navigate,
   popupContainer: props.popupContainer,
 })

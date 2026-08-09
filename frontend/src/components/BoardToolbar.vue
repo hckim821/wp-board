@@ -65,7 +65,20 @@ const canEdit = computed(() => !board.readOnly.value)
 const canBranch = computed(
   () => isTemplate.value && !board.hostReadOnly.value && board.version.value?.status !== 'DRAFT',
 )
-const makerLabel = computed(() => makerName ?? `설비사 #${makerId}`)
+/**
+ * 설비사 표시명 — 세 단계로 떨어진다 (2026-08-09).
+ *
+ *   1. `makerName` prop — 호스트가 직접 준 이름. 이름 짓기는 호스트의 일이므로 이것이 우선.
+ *   2. `project.maker_name` — 서버가 **호스트의 `MakerResolver`** 를 거쳐 실어 보낸 이름.
+ *      전달 경로만 다를 뿐 출처는 똑같이 호스트다. 개발 하니스에서는 `wp_dev_makers.name`.
+ *   3. `설비사 #{id}` — 위 둘이 다 없을 때만. 이름을 지어내지 않는다는 뜻이지, 여기까지
+ *      내려오는 것이 정상이라는 뜻은 아니다.
+ *
+ * 2번이 없던 시절에는 호스트가 prop 을 늦게 주기만 해도 곧장 3번으로 떨어졌다.
+ */
+const makerLabel = computed(
+  () => makerName() ?? board.project.value?.maker_name ?? `설비사 #${makerId()}`,
+)
 
 /** `v2`, or empty when the server sent no version number (`plan.md` §0.6). */
 const sourceVersionLabel = computed(() => {

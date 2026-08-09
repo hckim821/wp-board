@@ -648,15 +648,33 @@ export class MockBackend {
 
   // ───────────────────────────────────────────────────────── projects
 
+  /**
+   * Stamps the resolver-derived `maker_name` onto an outgoing project.
+   *
+   * **The real server does this on every `ProjectOut`** (`api/v1/projects.py::_to_out`), not
+   * just in the overview. The mock only did it in `projectsOverview()`, so a client reading
+   * `project.maker_name` looked broken here and worked live — the exact asymmetry
+   * `HANDOFF.md` §0.12 warns about, where the mock disagreeing with the server means only
+   * the mock checks stay green.
+   *
+   * `null` when no resolver is configured, which is a normal state (root §2.2).
+   */
+  private withMakerName(project: WpProject): WpProject {
+    return {
+      ...project,
+      maker_name: this.resolverMakers.find((m) => m.id === project.maker_id)?.name ?? null,
+    }
+  }
+
   listProjects(makerId: number | string): WpProject[] {
     return this.projects
       .filter((p) => String(p.maker_id) === String(makerId) && p.is_active)
-      .map((p) => ({ ...p }))
+      .map((p) => this.withMakerName(p))
   }
 
   getProject(projectId: number): { project: WpProject; items: WpItem[] } {
     return {
-      project: { ...this.mustProject(projectId) },
+      project: this.withMakerName(this.mustProject(projectId)),
       items: this.project(this.projectScope(projectId)),
     }
   }
@@ -763,7 +781,7 @@ export class MockBackend {
       })),
     )
 
-    return { ...project }
+    return this.withMakerName(project)
   }
 
   deleteProject(projectId: number): void {
@@ -1115,7 +1133,7 @@ export class MockBackend {
     }
     project.name = trimmed
     project.updated_at = new Date().toISOString()
-    return { ...project }
+    return this.withMakerName(project)
   }
 
   /** Makers that have at least one **active** project. */

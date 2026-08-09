@@ -100,7 +100,12 @@
   - 증상은 "설비사 A 의 두 번째·세 번째 프로젝트만 카드로 감싸져 보인다" 였다. **첫 행만 멀쩡했던 이유는 `wp-border-*` 가 아예 없었기 때문**이다(`index > 0` 에만 구분선을 줬다). 전체 현황·설비사 관리 양쪽에서 같은 증상.
   - 해법은 `wp-border-0` 동반 하나뿐: **`wp-border-0 wp-border-t wp-border-solid`**. 저장소 전체 7개 파일 12곳을 고쳤다(뷰 2 · 모달 3 · 셀 에디터 2).
   - ⚠️ 기존 `auditBorders` 는 이걸 **통과시킨다** — 스타일이 있기 때문이다. 방향 ②(`borderBoxOffenders`)를 추가했고, 섹션 H 에 계산 스타일 프로브 + NEGATIVE CONTROL 을 넣었다. `styles/tailwind.css` 주석이 두 방향의 정본이다.
-- 오케스트레이터 직접 검증 (2026-08-09): 백엔드 **561 passed** · `npm run verify` **558 passed** · `npm run check:dom` **434 passed** · type-check clean. ⚠️ **UI 개편의 실제 렌더링은 눈으로 확인하지 못했다** — jsdom 은 레이아웃을 계산하지 않으므로 구조·동작만 검증됐다(위 테두리 버그가 그 한계의 실례다 — 계산 스타일까지 재고 나서야 잡혔다). `npm run dev` (5180) 로 확인할 것. `db/verify.py` DRIFT 와 `verify_findings.py` N-A 5건은 **기존 드리프트**(§0.5, §0.12 문서 모델 개편 잔재)이며 이번 변경과 무관 — OPEN 은 0.
+- **설비사 표시명이 `설비사 #1` 로 나오던 버그 (2026-08-09, 사용자 보고).** 원인 둘이 겹쳤다.
+  - ① **컨텍스트가 스냅샷이었다.** `BoardShell` 이 `provide()` 시점의 `props.makerName`/`makerId` 를 **평범한 값**으로 담아, 이후 prop 변경이 영영 반영되지 않았다. 같은 파일이 스토어에는 "호스트가 마운트된 보드에서 바꿀 수 있으니 getter 로" 라고 써 놓고 컨텍스트는 반대로 하고 있었다. → **getter 로 변경** (`runtime/context.ts`, 소비처는 `BoardToolbar`·`ProjectDashboard` 둘뿐).
+  - ② **서버가 이미 주는 이름을 안 썼다.** `ProjectOut.maker_name` 은 호스트의 `MakerResolver` 를 거친 값인데(개발에서는 `wp_dev_makers.name`) 폴백에 없어서 곧장 원시 id 로 떨어졌다. → **3단 폴백**: prop → `project.maker_name` → `설비사 #{id}`. 두 제목이 같은 규칙을 쓴다.
+  - ③ **목이 서버와 어긋나 있었다** (§0.12 교훈 재발). 실서버는 모든 `ProjectOut` 에 `maker_name` 을 채우는데 목은 `projectsOverview()` 에서만 만들었다 → `withMakerName()` 로 모든 프로젝트 응답에 적용.
+  - 검사는 **prop 없이** 마운트해 `G정밀`(SEED_MAKERS 의 maker 7)이 나오는지 본다 — prop 으로 넘긴 이름을 기대하면 어느 경로로 왔는지 구분하지 못한다. 실서버로도 확인: 세 프로젝트 모두 `maker_name = "설비사 A (개발 스텁)"`.
+- 오케스트레이터 직접 검증 (2026-08-09): 백엔드 **561 passed** · `npm run verify` **558 passed** · `npm run check:dom` **439 passed** · type-check clean. ⚠️ **UI 개편의 실제 렌더링은 눈으로 확인하지 못했다** — jsdom 은 레이아웃을 계산하지 않으므로 구조·동작만 검증됐다(위 테두리 버그가 그 한계의 실례다 — 계산 스타일까지 재고 나서야 잡혔다). `npm run dev` (5180) 로 확인할 것. `db/verify.py` DRIFT 와 `verify_findings.py` N-A 5건은 **기존 드리프트**(§0.5, §0.12 문서 모델 개편 잔재)이며 이번 변경과 무관 — OPEN 은 0.
 
 ## 1. 한 줄 요약
 

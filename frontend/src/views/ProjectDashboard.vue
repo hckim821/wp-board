@@ -111,8 +111,12 @@ async function exportPptx() {
 }
 
 const projectName = computed(() => board.project.value?.name ?? '')
+/** `BoardToolbar.makerLabel` 과 같은 3단계 폴백 — 두 제목이 다른 이름을 내면 안 된다. */
 const makerLabel = computed(
-  () => makerName ?? (board.project.value ? `설비사 #${board.project.value.maker_id}` : ''),
+  () =>
+    makerName() ??
+    board.project.value?.maker_name ??
+    (board.project.value ? `설비사 #${board.project.value.maker_id}` : ''),
 )
 
 /** 상단 집계 칩 — 전체 / 진행중 / 완료 / 보류 (§0.5-2). */

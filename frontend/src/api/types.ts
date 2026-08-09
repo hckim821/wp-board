@@ -91,8 +91,12 @@ export interface WpProject {
   maker_id: number
   /**
    * Filled in only when the host injected a `MakerResolver` (root `INTEGRATION.md` §2).
-   * Never required, and never the display source here — the `makerName` prop is, because
-   * naming makers is the host's job.
+   *
+   * Never required. It is the **second** display source, behind the `makerName` prop —
+   * naming makers is the host's job either way, and this is the host's own resolver
+   * answering through the API instead of through a prop. Falling back to it before
+   * `설비사 #{id}` is what keeps a host that passes no prop (or passes it late) from
+   * showing a raw id next to a perfectly well-named maker.
    */
   maker_name?: string | null
   name: string

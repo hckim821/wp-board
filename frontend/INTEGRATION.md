@@ -118,9 +118,22 @@ configure({ apiBaseUrl: 'https://intranet.example.com/wp' })
 |---|---|---|---|
 | **`makerId`** | `number \| string` | — | **필수.** 호스트 설비사 PK. 이 모듈은 설비사 목록/조회 API 를 갖지 않는다 (§2) |
 | **`projectId`** | `number \| null` | — | **필수** (null 허용). 열 프로젝트. `null` 이면 "전체 현황에서 프로젝트를 선택하세요" 안내만 렌더한다 — **첫 프로젝트를 대신 열지 않는다** |
-| `makerName` | `string \| null` | `null` | 표시 전용. 없으면 `설비사 #<id>` 로 대체 |
+| `makerName` | `string \| null` | `null` | 표시 전용. 아래 3단 폴백 |
 
 `workPackageId` prop 은 **없어졌다.** 템플릿 선택은 관리 화면의 툴바가 담당한다.
+
+**설비사 표시명은 3단으로 떨어진다** (2026-08-09). 대시보드 제목과 Work Package 툴바가
+같은 규칙을 쓴다 — 두 제목이 다른 이름을 내면 안 되기 때문이다.
+
+1. `makerName` prop — 호스트가 직접 준 이름.
+2. `project.maker_name` — 서버가 **호스트의 `MakerResolver`** 를 거쳐 실어 보낸 이름. 전달
+   경로만 다를 뿐 출처는 똑같이 호스트다. resolver 를 주입했다면 prop 을 주지 않아도 된다.
+3. `설비사 #<id>` — 위 둘이 다 없을 때만. 즉 **resolver 도 prop 도 없는 설치**에서만 보인다.
+
+> ⚠️ `makerName`(과 `makerId`)은 **마운트된 보드에서 바꿔도 반영된다.** 예전에는 셸이
+> `provide()` 시점의 값을 스냅샷으로 잡아 두어, 이름을 비동기로 해석해 나중에 내려주는
+> 호스트는 영영 갱신되지 않았다 — 증상은 멀쩡히 이름이 있는 설비사 옆에 `설비사 #1` 이
+> 찍히는 것이었다. 지금은 getter 로 넘긴다.
 
 **프로젝트 목록 화면도 없어졌다** (`plan.md` §0.6-4). 진입은 전체 현황의 `onOpenProject` **하나
 뿐**이며, 그래서 `projectId` 가 필수 prop 이다. 모듈 안에 목록을 남겨 두면 호스트가 준 진입점을
@@ -827,7 +840,7 @@ npm install
 npm run dev          # http://localhost:5180 — 목 데이터로 즉시 동작
 npm run type-check   # vue-tsc (앱 + 체크 스크립트 두 벌)
 npm run verify       # 재계산·경계·apply·버전·검증·대시보드/전체현황·문서 계약·순서 (558 checks, 목)
-npm run check:dom    # jsdom 마운트·그리드·팝업·탭·문서/Owner 셀 팝업·허브·XLSX/PPT (434 checks, 목)
+npm run check:dom    # jsdom 마운트·그리드·팝업·탭·문서/Owner 셀 팝업·허브·XLSX/PPT (439 checks, 목)
 npm run check        # 위 세 개
 npm run build:remote # dist-remote/
 ```
