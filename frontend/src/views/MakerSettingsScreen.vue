@@ -285,7 +285,7 @@ defineExpose({ reload: load, hasUnsavedChanges: () => dirty.value })
             :key="project.id"
             class="wp-ml-6 wp-flex wp-items-center wp-gap-3 wp-rounded-lg wp-px-3 wp-py-2"
             data-wp-project-row
-            :class="index > 0 ? 'wp-mt-1 wp-border-t wp-border-solid' : 'wp-mt-3'"
+            :class="index > 0 ? 'wp-mt-1 wp-border-0 wp-border-t wp-border-solid' : 'wp-mt-3'"
             :style="{
               borderColor: '#f1f5f9',
               background: project.is_active ? 'transparent' : '#f8fafc',

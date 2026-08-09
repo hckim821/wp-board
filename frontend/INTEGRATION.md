@@ -827,7 +827,7 @@ npm install
 npm run dev          # http://localhost:5180 — 목 데이터로 즉시 동작
 npm run type-check   # vue-tsc (앱 + 체크 스크립트 두 벌)
 npm run verify       # 재계산·경계·apply·버전·검증·대시보드/전체현황·문서 계약·순서 (558 checks, 목)
-npm run check:dom    # jsdom 마운트·그리드·팝업·탭·문서/Owner 셀 팝업·허브·XLSX/PPT (426 checks, 목)
+npm run check:dom    # jsdom 마운트·그리드·팝업·탭·문서/Owner 셀 팝업·허브·XLSX/PPT (434 checks, 목)
 npm run check        # 위 세 개
 npm run build:remote # dist-remote/
 ```

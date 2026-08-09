@@ -150,23 +150,58 @@ async function main() {
    * 그래서 색이 아니라 **클래스 짝**을 감사한다. 화면이 살아 있는 동안 호출해야 하므로
    * 헬퍼로 두고 각 섹션에서 부른다.
    */
-  const BORDER_WIDTH_ONLY = new Set([
+  /** 네 변의 두께를 한 번에 정하는 유틸리티. 이것이 있어야 나머지 변이 0 으로 고정된다. */
+  const BORDER_WIDTH_ALL = new Set([
     'wp-border', 'wp-border-0', 'wp-border-2', 'wp-border-4', 'wp-border-8',
+  ])
+  /** 한쪽 변의 두께만 정하는 유틸리티. 나머지 세 변은 손대지 않는다. */
+  const BORDER_WIDTH_SIDE = new Set([
     'wp-border-t', 'wp-border-b', 'wp-border-l', 'wp-border-r',
     'wp-border-x', 'wp-border-y',
   ])
+  const BORDER_WIDTH_ONLY = new Set([...BORDER_WIDTH_ALL, ...BORDER_WIDTH_SIDE])
   const BORDER_STYLE = new Set([
     'wp-border-solid', 'wp-border-dashed', 'wp-border-dotted',
     'wp-border-double', 'wp-border-hidden', 'wp-border-none',
   ])
+  /** `border-style: none` 이므로 나머지 변이 새어 나올 일이 없다. */
+  const BORDER_STYLE_INVISIBLE = new Set(['wp-border-hidden', 'wp-border-none'])
 
+  const describe = (el: HTMLElement) =>
+    `${el.tagName.toLowerCase()}.${[...el.classList].filter((c) => c.startsWith('wp-border')).join('.')}`
+
+  /** 방향 ①: 두께만 있고 스타일이 없다 → 아무것도 안 그려진다. */
   const borderOffenders = (scope: HTMLElement | Document) =>
     ([...scope.querySelectorAll('*')] as HTMLElement[])
       .filter((el) => {
         const classes = [...el.classList]
         return classes.some((c) => BORDER_WIDTH_ONLY.has(c)) && !classes.some((c) => BORDER_STYLE.has(c))
       })
-      .map((el) => `${el.tagName.toLowerCase()}.${[...el.classList].filter((c) => c.startsWith('wp-border')).join('.')}`)
+      .map(describe)
+
+  /**
+   * 방향 ②: 스타일 + **한쪽 변 두께만** 있고 전체 두께 유틸리티가 없다 → 나머지 세 변이
+   * 초기값 `medium`(≈3px)으로 그려져 **상자가 된다.**
+   *
+   * `wp-border-solid` 는 `border-style: solid` 를 네 변 전부에 건다. preflight 가 없으니
+   * 두께의 초기값은 0 이 아니라 `medium` 이고, `wp-border-t` 는 위쪽 두께만 덮는다. 그래서
+   * `wp-border-t wp-border-solid` 는 구분선이 아니라 테두리 상자를 그린다 —
+   * 2026-08-09 사용자가 "두 번째·세 번째 프로젝트만 카드로 감싸져 보인다" 고 보고한 것이
+   * 정확히 이것이었고, 실측으로 `right/bottom/left = medium/solid` 를 확인했다.
+   *
+   * 고치는 방법은 `wp-border-0` 를 함께 주는 것뿐이다 (네 변 0 → 한쪽만 1px).
+   * 방향 ① 감사는 이 경우를 통과시킨다 — 스타일이 **있기** 때문이다. 두 방향이 다 필요하다.
+   */
+  const borderBoxOffenders = (scope: HTMLElement | Document) =>
+    ([...scope.querySelectorAll('*')] as HTMLElement[])
+      .filter((el) => {
+        const classes = [...el.classList]
+        if (!classes.some((c) => BORDER_STYLE.has(c))) return false
+        if (classes.some((c) => BORDER_STYLE_INVISIBLE.has(c))) return false
+        if (!classes.some((c) => BORDER_WIDTH_SIDE.has(c))) return false
+        return !classes.some((c) => BORDER_WIDTH_ALL.has(c))
+      })
+      .map(describe)
 
   const auditBorders = (scope: HTMLElement, label: string) => {
     const offenders = borderOffenders(scope)
@@ -174,6 +209,12 @@ async function main() {
       `${label}: every wp-border width utility is paired with an explicit style`,
       offenders.length === 0,
       [...new Set(offenders)].slice(0, 8),
+    )
+    const boxes = borderBoxOffenders(scope)
+    check(
+      `${label}: every one-sided border also pins the other three to 0`,
+      boxes.length === 0,
+      [...new Set(boxes)].slice(0, 8),
     )
   }
 
@@ -3072,6 +3113,67 @@ async function main() {
         dom.window.getComputedStyle(withStyle).borderTopWidth,
       ],
     )
+    /*
+     * 같은 사실의 **두 번째 결과**, 그리고 2026-08-09 실제 버그: 한쪽 변 두께만 주면
+     * 나머지 세 변이 초기값 `medium` 으로 그려져 구분선이 아니라 **상자**가 된다.
+     *
+     * 사용자 보고는 "설비사 A 의 두 번째·세 번째 프로젝트만 카드로 감싸져 보인다" 였다.
+     * 첫 행은 `wp-border-*` 가 아예 없었고(그래서 멀쩡했고), 나머지는
+     * `wp-border-t wp-border-solid` 였다. `wp-border-0` 를 함께 주는 것이 유일한 해법이다.
+     */
+    const sideOnly = dom.window.document.createElement('div')
+    sideOnly.className = 'wp-border-t wp-border-solid'
+    const sidePinned = dom.window.document.createElement('div')
+    sidePinned.className = 'wp-border-0 wp-border-t wp-border-solid'
+    dom.window.document.body.append(sideOnly, sidePinned)
+
+    const sideOnlyStyle = dom.window.getComputedStyle(sideOnly)
+    check(
+      'a one-sided border WITHOUT wp-border-0 leaks a full box on the other three sides',
+      sideOnlyStyle.borderLeftWidth === 'medium' && sideOnlyStyle.borderLeftStyle === 'solid',
+      [sideOnlyStyle.borderTopWidth, sideOnlyStyle.borderLeftWidth, sideOnlyStyle.borderLeftStyle],
+    )
+    const pinnedStyle = dom.window.getComputedStyle(sidePinned)
+    check(
+      '…and wp-border-0 is what turns it back into a single rule',
+      pinnedStyle.borderTopWidth === '1px' &&
+        pinnedStyle.borderLeftWidth === '0px' &&
+        pinnedStyle.borderBottomWidth === '0px' &&
+        pinnedStyle.borderRightWidth === '0px',
+      [
+        pinnedStyle.borderTopWidth,
+        pinnedStyle.borderRightWidth,
+        pinnedStyle.borderBottomWidth,
+        pinnedStyle.borderLeftWidth,
+      ],
+    )
+
+    /*
+     * NEGATIVE CONTROL — 위 감사(`auditBorders` 방향 ②)가 정말 실패할 수 있는지 본다.
+     * 이 저장소에서 "이름이 검증 내용보다 강하게 주장하는 테스트" 가 네 번 나왔다 (README §8).
+     */
+    const badBox = dom.window.document.createElement('div')
+    badBox.className = 'wp-border-b wp-border-solid'
+    const goodBox = dom.window.document.createElement('div')
+    goodBox.className = 'wp-border-0 wp-border-b wp-border-solid'
+    const probeHost = dom.window.document.createElement('div')
+    probeHost.append(badBox, goodBox)
+    dom.window.document.body.appendChild(probeHost)
+    check(
+      'NEGATIVE CONTROL — the one-sided-border audit flags an unpinned element',
+      borderBoxOffenders(probeHost).length === 1,
+      borderBoxOffenders(probeHost),
+    )
+    badBox.className = 'wp-border-0 wp-border-b wp-border-solid'
+    check(
+      '…and stops flagging it once wp-border-0 is added',
+      borderBoxOffenders(probeHost).length === 0,
+      borderBoxOffenders(probeHost),
+    )
+    probeHost.remove()
+
+    sideOnly.remove()
+    sidePinned.remove()
     widthOnly.remove()
     withStyle.remove()
     styleProbe.remove()

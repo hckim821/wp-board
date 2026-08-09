@@ -263,7 +263,7 @@ async function apply() {
           v-for="(row, index) in rows"
           :key="row.key"
           :draggable="dragArmed === index"
-          class="wp-border-t wp-border-solid"
+          class="wp-border-0 wp-border-t wp-border-solid"
           data-wp-doc-row
           :style="{
             borderColor: '#f0f0f0',

@@ -7,12 +7,27 @@
  * defaults ourselves, scoped to our own subtree (`.wp-root`), together with the one
  * piece of preflight our layout utilities genuinely need: `box-sizing: border-box`.
  *
- * ⚠️ Preflight is also what normally sets `border-style: solid` on every element, so
- * without it `wp-border`/`wp-border-b`/`wp-border-t` alone draw NOTHING (width 1px,
- * style `none`). Every solid border must therefore carry an explicit `wp-border-solid`.
+ * ⚠️ Preflight is also what normally sets `border-style: solid` AND `border-width: 0`
+ * on every element. Without it, borders go wrong in **two opposite directions** — and
+ * each one has already shipped as a visible bug:
+ *
+ *   ① width only  — `wp-border`/`wp-border-t` alone draw NOTHING (width 1px, style
+ *     `none`). Every visible border must carry an explicit `wp-border-solid`.
+ *     2026-08-08: the invisible 진행전 dashboard cells.
+ *
+ *   ② style + one side — `wp-border-t wp-border-solid` draws a full BOX, not a rule.
+ *     `border-style: solid` applies to all four sides while `wp-border-t` sets only the
+ *     top width, so the other three fall back to the initial `medium` (≈3px) instead of
+ *     0. One-sided borders must therefore also carry **`wp-border-0`**:
+ *     `wp-border-0 wp-border-t wp-border-solid`.
+ *     2026-08-09: "설비사 A 의 두 번째·세 번째 프로젝트만 카드로 감싸져 보인다" — the
+ *     first row had no border classes at all, which is why only it looked right.
+ *
+ * `dev/domCheck.ts` audits both directions on every mounted screen, with computed-style
+ * probes and negative controls in section H.
+ *
  * We do not fix this with a scoped `.wp-root *` rule on purpose: it would tie with
- * antd's own selectors on specificity and win or lose by stylesheet order — 2026-08-08,
- * the invisible 진행전 dashboard cells were exactly this bug.
+ * antd's own selectors on specificity and win or lose by stylesheet order.
  */
 @tailwind components;
 @tailwind utilities;

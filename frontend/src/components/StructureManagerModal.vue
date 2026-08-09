@@ -310,7 +310,7 @@ async function apply() {
           v-for="(row, index) in rows"
           :key="row.key"
           :draggable="dragArmed === index"
-          class="wp-border-t wp-border-solid"
+          class="wp-border-0 wp-border-t wp-border-solid"
           :style="{
             borderColor: '#f0f0f0',
             backgroundColor: dragOver === index && dragFrom !== index ? '#e6f4ff' : 'transparent',

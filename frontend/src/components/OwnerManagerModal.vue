@@ -232,7 +232,7 @@ function removeOwner(owner: WpOwner) {
         <tr
           v-for="owner in owners"
           :key="owner.id"
-          class="wp-border-t wp-border-solid"
+          class="wp-border-0 wp-border-t wp-border-solid"
           data-wp-owner-row
           style="border-color: #f0f0f0"
         >
@@ -278,7 +278,7 @@ function removeOwner(owner: WpOwner) {
           </td>
         </tr>
         <!-- [Owner 추가] 가 만든 인라인 행 — 이름을 넣어야 생성된다. -->
-        <tr v-if="renamingId === 'new'" class="wp-border-t wp-border-solid" style="border-color: #f0f0f0">
+        <tr v-if="renamingId === 'new'" class="wp-border-0 wp-border-t wp-border-solid" style="border-color: #f0f0f0">
           <td />
           <td class="wp-py-1">
             <AInput

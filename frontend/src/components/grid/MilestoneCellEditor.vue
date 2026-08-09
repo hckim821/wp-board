@@ -92,7 +92,7 @@ defineExpose({ getValue: () => props.params.value })
     style="border-color: #e4e4e4"
   >
     <div
-      class="wp-flex wp-items-center wp-justify-between wp-border-b wp-border-solid wp-px-3 wp-py-2 wp-text-xs wp-font-medium"
+      class="wp-flex wp-items-center wp-justify-between wp-border-0 wp-border-b wp-border-solid wp-px-3 wp-py-2 wp-text-xs wp-font-medium"
       style="border-color: #f0f0f0; color: #8c8c8c"
     >
       <span>Milestone 선택</span>
@@ -106,7 +106,7 @@ defineExpose({ getValue: () => props.params.value })
     <template v-else>
       <div
         v-if="shortcuts.length > 0"
-        class="wp-border-b wp-border-solid wp-px-2 wp-py-2"
+        class="wp-border-0 wp-border-b wp-border-solid wp-px-2 wp-py-2"
         style="border-color: #f0f0f0; background-color: #fafafa"
       >
         <p class="wp-mb-1 wp-px-1 wp-text-2xs" style="color: #bfbfbf">인접 Milestone</p>
@@ -148,7 +148,7 @@ defineExpose({ getValue: () => props.params.value })
         </p>
       </div>
 
-      <div class="wp-border-t wp-border-solid wp-px-2 wp-py-2" style="border-color: #f0f0f0">
+      <div class="wp-border-0 wp-border-t wp-border-solid wp-px-2 wp-py-2" style="border-color: #f0f0f0">
         <AButton block size="small" :disabled="board.readOnly.value" @click="openManager">
           ＋ 새 Milestone 생성
         </AButton>

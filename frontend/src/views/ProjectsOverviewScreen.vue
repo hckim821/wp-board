@@ -383,7 +383,7 @@ defineExpose({ reload: load })
           :key="project.id"
           class="wp-ml-6 wp-rounded-lg wp-px-3 wp-py-3"
           data-wp-overview-row
-          :class="index > 0 ? 'wp-mt-2 wp-border-t wp-border-solid' : 'wp-mt-3'"
+          :class="index > 0 ? 'wp-mt-2 wp-border-0 wp-border-t wp-border-solid' : 'wp-mt-3'"
           style="border-color: #f1f5f9"
         >
           <!--

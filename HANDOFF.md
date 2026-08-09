@@ -96,7 +96,11 @@
   - ⚠️ domCheck 훅이 바뀌었다: `[data-wp-maker-show]` 는 이제 `<button role="switch">` 라 **훅이 곧 클릭 대상**이다. 안쪽 `<input>` 을 찾던 옛 코드는 null 을 집는다. 새 훅: `[data-wp-maker-card]` · `[data-wp-maker-toggle]` · `[data-wp-project-row]` · `[data-wp-project-active]`.
   - 접기 판정은 **카드 안에서** 세야 한다 — 픽스처의 설비사 넷 중 프로젝트를 가진 것은 하나뿐이고 카드 순서는 이름순이라, 전체 행 수로 재면 빈 카드를 접고 오탐한다(실제로 한 번 틀렸다).
 - **개발 하니스에서 프로젝트 메뉴·가짜 설비사 표 제거** (사용자 결정). 진입은 전체 현황 [이동] 뿐이라 메뉴 항목은 "고른 프로젝트가 없는 프로젝트 화면" 으로 가는 버튼이었다. `A설비 주식회사`/`B테크놀로지` 하드코딩도 삭제 — 실제 DB 설비사 id 와 무관한 숫자여서 그 상태로 진입하면 남의 설비사를 보게 됐다. 지금은 `openProject` 객체 하나(projectId·makerId·makerName)를 `GET /projects/{id}` 로 **거꾸로 해석**한다. 이름 해석이 호스트 책임이라는 계약이 하니스에 그대로 드러난다.
-- 오케스트레이터 직접 검증 (2026-08-09): 백엔드 **561 passed** · `npm run verify` **558 passed** · `npm run check:dom` **426 passed** · type-check clean. ⚠️ **UI 개편의 실제 렌더링은 눈으로 확인하지 못했다** — jsdom 은 레이아웃을 계산하지 않으므로 구조·동작만 검증됐다. `npm run dev` (5180) 로 확인할 것. `db/verify.py` DRIFT 와 `verify_findings.py` N-A 5건은 **기존 드리프트**(§0.5, §0.12 문서 모델 개편 잔재)이며 이번 변경과 무관 — OPEN 은 0.
+- **preflight off 테두리 함정 — 반대 방향이 하나 더 있었다 (2026-08-09, 사용자 보고로 발견).** `wp-border-t wp-border-solid` 는 구분선이 아니라 **테두리 상자**를 그린다: `border-style: solid` 는 네 변 전부에 걸리는데 두께는 위쪽만 지정되고, preflight 가 없어 나머지 세 변이 0 이 아니라 초기값 `medium`(≈3px) 이 된다. 실측 확인: `right/bottom/left = medium/solid`.
+  - 증상은 "설비사 A 의 두 번째·세 번째 프로젝트만 카드로 감싸져 보인다" 였다. **첫 행만 멀쩡했던 이유는 `wp-border-*` 가 아예 없었기 때문**이다(`index > 0` 에만 구분선을 줬다). 전체 현황·설비사 관리 양쪽에서 같은 증상.
+  - 해법은 `wp-border-0` 동반 하나뿐: **`wp-border-0 wp-border-t wp-border-solid`**. 저장소 전체 7개 파일 12곳을 고쳤다(뷰 2 · 모달 3 · 셀 에디터 2).
+  - ⚠️ 기존 `auditBorders` 는 이걸 **통과시킨다** — 스타일이 있기 때문이다. 방향 ②(`borderBoxOffenders`)를 추가했고, 섹션 H 에 계산 스타일 프로브 + NEGATIVE CONTROL 을 넣었다. `styles/tailwind.css` 주석이 두 방향의 정본이다.
+- 오케스트레이터 직접 검증 (2026-08-09): 백엔드 **561 passed** · `npm run verify` **558 passed** · `npm run check:dom` **434 passed** · type-check clean. ⚠️ **UI 개편의 실제 렌더링은 눈으로 확인하지 못했다** — jsdom 은 레이아웃을 계산하지 않으므로 구조·동작만 검증됐다(위 테두리 버그가 그 한계의 실례다 — 계산 스타일까지 재고 나서야 잡혔다). `npm run dev` (5180) 로 확인할 것. `db/verify.py` DRIFT 와 `verify_findings.py` N-A 5건은 **기존 드리프트**(§0.5, §0.12 문서 모델 개편 잔재)이며 이번 변경과 무관 — OPEN 은 0.
 
 ## 1. 한 줄 요약
 
