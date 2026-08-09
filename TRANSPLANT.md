@@ -6,6 +6,46 @@
 > 이 저장소는 독립 실행형이 아니다. 백엔드는 **이미 가동 중인 FastAPI 프로젝트**에 라우터로 마운트되고,
 > 프론트엔드는 **Module Federation remote** 로 호스트 앱에 편입된다.
 
+## 0.0 먼저: 번들을 자동으로 만든다 — `tools/export_transplant.py`
+
+아래 §1 의 목록을 손으로 옮기는 대신 한 번에 만든다.
+
+```bash
+python tools/export_transplant.py                 # _transplant/ 에 생성
+python tools/export_transplant.py --out ../host    # 다른 위치에
+python tools/export_transplant.py --frontend       # dist-remote/ 도 (먼저 npm run build:remote)
+python tools/export_transplant.py --check-only     # 이미 만든 번들만 다시 감사
+```
+
+```
+_transplant/
+  backend/app/          FastAPI 모듈 — 개발 전용 파일이 **애초에 복사되지 않는다**
+  db/transplant.sql     신규 설치용 DDL
+  db/migrations/        기존 설치 업그레이드용
+  docs/                 INTEGRATION.md · TRANSPLANT.md · backend-requirements.txt
+  frontend/dist-remote/ (--frontend)
+```
+
+**요점은 복사가 아니라 복사 후 감사다.** 수동 이관의 실제 사고는 파일을 빠뜨리는 것이 아니라
+**지워야 할 것을 남기는 것**이다 — `standalone.py` 하나가 따라가면 호스트 앱과 `FastAPI()` 가
+충돌하고, `stub_maker_resolver.py` 가 남으면 호스트에 없는 `wp_dev_makers` 를 조회한다.
+스크립트는 매번 여섯 가지를 확인하고, 하나라도 걸리면 **exit 1** 로 멈춘다:
+
+| 검사 | 걸리면 생기는 일 |
+|---|---|
+| 개발 전용 파일 부재 | 호스트 앱과 충돌 / 없는 테이블 조회 |
+| `FastAPI()` 인스턴스 부재 (AST) | 앱이 둘이 된다 |
+| `os.environ`·`getenv` 직접 조회 부재 | 호스트 환경변수와 뒤섞인다 |
+| `wp_dev_makers` 참조 · 설비사 JOIN 부재 | 호스트에 없는 테이블 (§2.1 위반) |
+| `.env` 류 부재 | 개발 접속 정보 유출 |
+| `transplant.sql` 에 `CREATE DATABASE`/`USE`·개발 스텁 부재 | 호스트 DB 를 갈아탄다 |
+
+> 문자열이 아니라 **AST** 로 보고, SQL 은 **주석을 걷어낸 뒤** 본다. 이 저장소의 주석은 금지
+> 대상을 *설명하느라* 그 문자열을 그대로 담고 있어서, 순진하게 검색하면 자기 자신을 위반으로
+> 잡는다 — 첫 실행에서 실제로 오탐 2건이 났고 셋 다 주석이었다.
+
+이 스크립트는 **개발 도구다.** 호스트로 가져가지 않는다.
+
 ## 0. 이관 순서 한눈에
 
 | 순서 | 작업 | 상세 |
